@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaxDome AI Sales Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              taxdome: {
+                blue: '#0072EF',
+                dark: '#0B1C33',
+                light: '#F4F7FB'
+              },
+              apple: {
+                gray: '#F5F5F7',
+                text: '#1D1D1F'
+              }
+            },
+            fontFamily: {
+              sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Base font smoothing for consistency */
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+
+      /* Consistent Page Padding */
+      .page-padding {
+        padding-left: 20mm !important;
+        padding-right: 20mm !important;
+      }
+
+      /* Styles specifically for the PDF generation context */
+      .pdf-mode {
+        width: 210mm !important; /* Exact A4 width */
+        min-width: 210mm !important;
+        max-width: 210mm !important;
+        margin: 0 !important; /* Align to top-left to prevent capture offsets */
+        background-color: white !important;
+      }
+
+      .pdf-mode .print-page {
+        width: 100% !important;
+        min-height: 296mm !important; /* Slightly less than 297 to prevent overflow edge cases */
+        height: auto !important;
+        margin: 0 !important;
+        padding-bottom: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      
+      @media print {
+        @page { margin: 0; size: A4; }
+        
+        html, body {
+          height: auto !important;
+          min-height: 0 !important;
+          overflow: visible !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: white !important;
+        }
+
+        body { -webkit-print-color-adjust: exact; }
+        .no-print { display: none !important; }
+        
+        /* Reset background for the root app and all containers */
+        #root, #root > div, #root > div > div {
+           background-color: white !important;
+           margin: 0 !important;
+           padding: 0 !important;
+           height: auto !important;
+           min-height: 0 !important;
+           overflow: visible !important;
+           display: block !important;
+        }
+
+        .print-container { 
+           width: 100% !important;
+           max-width: none !important;
+           margin: 0 !important;
+           display: block !important;
+        }
+        
+        .print-page {
+           box-shadow: none !important;
+           margin: 0 !important;
+           page-break-after: always;
+           width: 100% !important;
+           min-height: 297mm !important; 
+           height: auto !important;
+           overflow: visible !important;
+           background: white !important;
+           display: flex;
+           flex-direction: column;
+           border: none !important;
+        }
+        
+        .print-page:last-child {
+           page-break-after: auto;
+        }
+      }
+      
+      /* Strong break avoidance - works in both browser preview and print */
+      .avoid-break {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        position: relative;
+      }
+
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.559.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.32.0",
+    "react/": "https://esm.sh/react@^19.2.1/",
+    "react": "https://esm.sh/react@^19.2.1"
+  }
+}
+</script>
+</head>
+  <body class="bg-apple-gray text-apple-text antialiased selection:bg-taxdome-blue selection:text-white">
+    <div id="root"></div>
+  </body>
+</html>

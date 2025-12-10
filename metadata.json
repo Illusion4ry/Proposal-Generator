@@ -1,0 +1,5 @@
+{
+  "name": "TaxDome AI Proposal Generator",
+  "description": "An intelligent sales tool that generates professional, editable TaxDome proposals and executive summaries using Gemini with Search Grounding for real-time pricing.",
+  "requestFramePermissions": []
+}
