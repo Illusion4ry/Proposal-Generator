@@ -1,13 +1,13 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { FirmData, ProposalContent } from '../types';
-import { Download, Printer, ArrowLeft, Edit3, CheckCircle, Check, Loader2, Plus, Trash2, Globe, Rocket, Info, PlusCircle, Save, Cloud, XCircle, ArrowRight, Calendar, Clock } from 'lucide-react';
+import { Download, Printer, ArrowLeft, Edit3, CheckCircle, Check, Loader2, Plus, Trash2, Globe, Rocket, XCircle, ArrowRight, Calendar, Clock, PlusCircle } from 'lucide-react';
 
 interface Props {
   firmData: FirmData;
   content: ProposalContent;
   onBack: () => void;
   onNew: () => void;
-  onSave: (content: ProposalContent) => Promise<void>;
 }
 
 // Editable Text Component that updates parent state
@@ -40,9 +40,8 @@ const EditableText: React.FC<{
   );
 };
 
-const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onSave }) => {
+const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew }) => {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [proposalData, setProposalData] = useState<ProposalContent>(content);
   // Default expiration date: Today + 7 days
   const [expirationDate, setExpirationDate] = useState(() => {
@@ -86,12 +85,6 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    await onSave(proposalData);
-    setIsSaving(false);
   };
 
   const handleDownload = async () => {
@@ -269,15 +262,6 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
             </span>
           </div>
           <div className="flex gap-3">
-             <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              type="button"
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 hover:text-taxdome-blue hover:border-blue-200 hover:bg-blue-50 rounded-lg transition-all font-medium text-sm mr-2 disabled:opacity-70 disabled:cursor-wait"
-            >
-               {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
-               {isSaving ? "Saving..." : "Save"}
-            </button>
              <button 
               onClick={onNew}
               type="button"

@@ -11,8 +11,8 @@ interface Props {
 }
 
 const DEFAULT_AE: AccountExecutive = {
-  id: 'default_ae',
-  name: 'Edgar Espinoza',
+  id: 'ae_edgar', 
+  name: 'Edgar Espinoza', 
   email: 'edgar@taxdome.com'
 };
 
@@ -33,7 +33,7 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     contactName: '',
     firmSize: 1,
     language: 'English',
-    selectedPlan: PlanType.PRO,
+    selectedPlan: PlanType.BUSINESS, // Default to Business
     selectedOnboarding: ONBOARDING_PACKAGES[0],
     features: [],
     transcript: '',
@@ -41,7 +41,7 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     accountExecutive: DEFAULT_AE
   });
 
-  // Load AEs from storage service (Cloud/Local)
+  // Load AEs from storage service
   useEffect(() => {
     const loadAes = async () => {
       setIsLoadingAes(true);
@@ -49,23 +49,18 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
         const aes = await getAccountExecutives();
         if (aes && aes.length > 0) {
           setAvailableAes(aes);
-          // If no AE selected yet, pick first one
-          if (data.accountExecutive.id === DEFAULT_AE.id && !initialData) {
+          // If no AE selected yet or using generic default, pick first one from storage
+          if ((!initialData && data.accountExecutive.email === DEFAULT_AE.email)) {
               setData(prev => ({ ...prev, accountExecutive: aes[0] }));
           }
         } else {
           // Initialize with default if empty
           const initial = [DEFAULT_AE];
           setAvailableAes(initial);
-          // Attempt to seed the cloud with default, but don't block if it fails
-          saveAccountExecutives(initial).catch(() => {
-            // Silently ignore save error during initialization in case of network issues
-            // This prevents the "Failed to fetch" error from appearing in the console for this specific auto-seed action
-          });
+          await saveAccountExecutives(initial);
           setData(prev => ({ ...prev, accountExecutive: initial[0] }));
         }
       } catch (e) {
-        // Fallback to default silently
         setAvailableAes([DEFAULT_AE]);
       } finally {
         setIsLoadingAes(false);
@@ -116,11 +111,7 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     const updated = [...availableAes, newAe];
     setAvailableAes(updated); // Optimistic update
     
-    try {
-      await saveAccountExecutives(updated);
-    } catch (e) {
-      console.warn("Could not save new AE to cloud");
-    }
+    await saveAccountExecutives(updated);
 
     setData(prev => ({ ...prev, accountExecutive: newAe }));
     setNewAeName('');
@@ -140,11 +131,7 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     const updated = availableAes.filter(ae => ae.id !== aeToDelete);
     setAvailableAes(updated); // Optimistic update
     
-    try {
-      await saveAccountExecutives(updated);
-    } catch (e) {
-      console.warn("Could not sync deletion to cloud");
-    }
+    await saveAccountExecutives(updated);
     
     // If we deleted the currently selected one, select the first available
     if (data.accountExecutive.id === aeToDelete) {
@@ -224,7 +211,7 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
             <div className="flex justify-between items-center mb-6 flex-shrink-0">
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                  Manage Account Executives 
-                 <Cloud size={16} className="text-taxdome-blue" />
+                 <Users size={16} className="text-taxdome-blue" />
               </h3>
               <button onClick={() => setShowAeModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
