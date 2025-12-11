@@ -6,7 +6,7 @@ import HistoryModal from './components/HistoryModal';
 import PromptModal from './components/PromptModal';
 import { getSavedProposals, saveProposalToStorage, deleteProposalFromStorage } from './services/storageService';
 import { generateProposal } from './services/geminiService';
-import { Layout } from 'lucide-react';
+import { Layout, Settings2, History } from 'lucide-react';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'input' | 'editor'>('input');
@@ -147,6 +147,21 @@ const App: React.FC = () => {
             <p className="text-lg text-gray-600 max-w-lg mx-auto">
               Create world-class TaxDome proposals in seconds using AI.
             </p>
+            
+            <div className="flex justify-center gap-3 mt-6">
+              <button 
+                onClick={() => setShowPromptSettings(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-700 rounded-full text-sm font-semibold hover:bg-taxdome-blue hover:text-white hover:shadow-lg hover:-translate-y-0.5 transition-all shadow-sm border border-gray-200"
+              >
+                <Settings2 size={16} /> Customize Prompt
+              </button>
+              <button 
+                onClick={handleOpenHistory}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-700 rounded-full text-sm font-semibold hover:bg-taxdome-blue hover:text-white hover:shadow-lg hover:-translate-y-0.5 transition-all shadow-sm border border-gray-200"
+              >
+                <History size={16} /> History
+              </button>
+            </div>
           </header>
 
           <main className="w-full relative z-10">
@@ -154,8 +169,6 @@ const App: React.FC = () => {
               onSubmit={handleGenerate} 
               isGenerating={isGenerating} 
               initialData={firmData}
-              onOpenHistory={handleOpenHistory}
-              onOpenPromptSettings={() => setShowPromptSettings(true)}
             />
           </main>
           

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { FirmData, ProposalContent } from '../types';
-import { Download, Printer, ArrowLeft, Edit3, CheckCircle, Check, Loader2, Plus, Trash2, Globe, Rocket, Info, PlusCircle, Save, Cloud, XCircle, ArrowRight } from 'lucide-react';
+import { Download, Printer, ArrowLeft, Edit3, CheckCircle, Check, Loader2, Plus, Trash2, Globe, Rocket, Info, PlusCircle, Save, Cloud, XCircle, ArrowRight, Calendar, Clock } from 'lucide-react';
 
 interface Props {
   firmData: FirmData;
@@ -84,15 +84,18 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
       const opt = {
         margin: 0,
         filename: `${firmData.firmName.replace(/\s+/g, '_')}_TaxDome_Proposal.pdf`,
-        image: { type: 'jpeg', quality: 1.0 }, // Maximum quality
+        image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
-          scale: 2, // A bit lower scale than 3 to prevent huge files, usually sufficient for screen -> pdf
+          scale: 2, 
           useCORS: true, 
           letterRendering: true, 
           scrollY: 0,
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
+        pagebreak: { 
+          mode: ['css', 'legacy'],
+          avoid: '.avoid-break' 
+        }
       };
 
       try {
@@ -172,6 +175,51 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
     }
   };
 
+  // --- Unified Components ---
+
+  const ProposalHeader = ({ title }: { title: string }) => (
+    <div className="bg-taxdome-dark text-white page-padding py-8 relative overflow-hidden flex-shrink-0 print:bg-taxdome-dark print:-webkit-print-color-adjust:exact">
+      {/* Decorative Circle */}
+      <div className="absolute top-0 right-0 w-48 h-48 bg-taxdome-blue opacity-10 rounded-bl-full transform translate-x-1/3 -translate-y-1/3"></div>
+      
+      <div className="relative z-10 flex justify-between items-center">
+        <div className="flex items-center gap-6">
+          <div className="text-4xl font-extrabold text-white tracking-tight">TaxDome</div>
+          <div className="h-10 w-px bg-white/10 hidden sm:block"></div>
+          <div className="hidden sm:block">
+             <div className="text-lg font-bold text-white/90">{firmData.firmName}</div>
+             <div className="text-sm text-taxdome-blue font-medium uppercase tracking-wider">{title}</div>
+          </div>
+        </div>
+        
+        <div className="text-right">
+            <div className="text-xs text-gray-400 uppercase tracking-widest mb-1">Prepared For</div>
+            <div className="font-medium text-sm text-white">{firmData.contactName}</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ProposalFooter = ({ pageNum }: { pageNum: number }) => (
+    <div className={`mt-auto bg-gray-50 border-t border-gray-100 page-padding py-6 print:bg-gray-50 print:-webkit-print-color-adjust:exact ${isDownloading ? 'mt-8' : ''}`}>
+       <div className="flex justify-between items-center text-xs text-gray-500">
+          <div className="flex gap-4">
+            <span className="font-semibold text-gray-400">TaxDome Proposal</span>
+            <span>&bull;</span>
+            <span>Confidential</span>
+             <span>&bull;</span>
+            <span>{new Date().getFullYear()}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>Page {pageNum}</span>
+            <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden print:bg-gray-200">
+               <div className="h-full bg-taxdome-blue print:bg-taxdome-blue" style={{ width: pageNum === 1 ? '50%' : '100%' }}></div>
+            </div>
+          </div>
+       </div>
+    </div>
+  );
+
   return (
     <div className="w-full min-h-screen bg-gray-100 pb-20 font-sans print:bg-white print:pb-0 print:h-auto print:overflow-visible">
       {/* Toolbar */}
@@ -237,49 +285,41 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
         {/* PAGE 1: Executive Summary */}
         <div className={`print-page w-full bg-white relative overflow-hidden flex flex-col ${isDownloading ? '' : 'shadow-2xl min-h-[297mm] print:shadow-none'}`}>
             
-            {/* TaxDome Brand Header */}
-            <div className="bg-taxdome-dark text-white page-padding py-12 relative overflow-hidden flex-shrink-0">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-taxdome-blue opacity-10 rounded-bl-full transform translate-x-1/3 -translate-y-1/3"></div>
-                <div className="relative z-10 flex justify-between items-end">
-                    <div>
-                        <div className="text-5xl font-extrabold text-white mb-6 tracking-tight">TaxDome</div>
-                        <h1 className="text-3xl font-bold tracking-tight mb-2">Proposal for {firmData.firmName}</h1>
-                        <p className="text-gray-400 text-lg font-light">Prepared for {firmData.contactName}</p>
-                    </div>
-                    <div className="text-right">
-                        <div className="mb-4">
-                           <div className="text-sm text-gray-400 uppercase tracking-widest mb-1">Date</div>
-                           <div className="font-medium">{new Date().toLocaleDateString()}</div>
-                        </div>
-                        <div>
-                           <div className="text-sm text-gray-400 uppercase tracking-widest mb-1">Valid Until</div>
-                           <EditableText 
-                              tag="div" 
-                              value={expirationDate} 
-                              onUpdate={(val) => setExpirationDate(val)}
-                              className="font-medium"
-                           />
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <ProposalHeader title="Executive Summary" />
 
-            <div className="page-padding pt-12 flex-grow flex flex-col">
-                {/* Executive Summary Content */}
-                <div className="prose prose-lg max-w-none flex-grow">
-                    <div className="flex items-center gap-3 mb-6 pb-2 border-b border-gray-100">
-                      <div className="w-1 h-8 bg-taxdome-blue rounded-full"></div>
-                      <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider m-0">Executive Summary</h2>
+            {/* Note: Remove flex-grow when downloading to let content flow naturally without forced whitespace */}
+            <div className={`page-padding pt-10 flex flex-col ${isDownloading ? '' : 'flex-grow'}`}>
+                {/* Info Bar */}
+                <div className="flex gap-8 mb-10 text-sm border-b border-gray-100 pb-4">
+                  <div>
+                    <span className="text-gray-400 uppercase text-xs font-bold tracking-wider block mb-1">Proposal Date</span>
+                    <div className="font-medium text-gray-900 flex items-center gap-2">
+                       <Calendar size={14} className="text-taxdome-blue"/> {new Date().toLocaleDateString()}
                     </div>
-                    
+                  </div>
+                   <div>
+                    <span className="text-gray-400 uppercase text-xs font-bold tracking-wider block mb-1">Quote Valid Until</span>
+                    <div className="font-medium text-gray-900 flex items-center gap-2">
+                        <Clock size={14} className="text-taxdome-blue"/>
+                        <EditableText 
+                            tag="span" 
+                            value={expirationDate} 
+                            onUpdate={(val) => setExpirationDate(val)}
+                        />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Executive Summary Content */}
+                <div className={`prose prose-lg max-w-none ${isDownloading ? '' : 'flex-grow'}`}>
                     <EditableText 
                         tag="h3" 
                         value={proposalData.executiveSummary.title}
                         onUpdate={(val) => updateContent('executiveSummary', 'title', val)}
-                        className="text-3xl font-bold text-gray-900 mb-8 font-sans leading-tight"
+                        className="text-3xl font-bold text-gray-900 mb-6 font-sans leading-tight"
                     />
                     
-                    <div className="text-gray-600 leading-relaxed space-y-6 mb-12 text-[1.05rem]">
+                    <div className="text-gray-600 leading-relaxed space-y-6 mb-10 text-[1.05rem]">
                        <EditableText 
                             tag="div" 
                             value={proposalData.executiveSummary.body} 
@@ -288,16 +328,18 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                         />
                     </div>
 
-                    <div className="bg-white rounded-2xl avoid-break">
-                        <h3 className="text-gray-900 font-bold mb-6 flex items-center gap-3 text-lg">
-                            <div className="p-2 bg-blue-50 rounded-lg shadow-sm text-taxdome-blue">
-                              <Globe size={20} />
-                            </div>
-                            Strategic Goals & Solutions
-                        </h3>
+                    <div className="bg-white rounded-2xl avoid-break border border-gray-100 shadow-sm overflow-hidden">
+                        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100">
+                          <h3 className="text-gray-900 font-bold flex items-center gap-3 text-lg m-0">
+                              <div className="p-1.5 bg-white rounded-md shadow-sm text-taxdome-blue">
+                                <Globe size={18} />
+                              </div>
+                              Strategic Goals & Solutions
+                          </h3>
+                        </div>
                         
                         {/* New Structured Challenge/Solution Grid */}
-                        <div className="space-y-4">
+                        <div className="p-6 space-y-4">
                             {(proposalData.executiveSummary.challengesAndSolutions || []).map((item, i) => (
                               <div key={i} className="group flex gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all relative">
                                  <div className="flex-1">
@@ -348,41 +390,34 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                             )}
                         </div>
 
-                        <button 
-                            onClick={addChallenge}
-                            className={`mt-6 flex items-center gap-2 text-sm font-medium text-taxdome-blue hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors no-print ${isDownloading ? 'hidden' : ''}`}
-                        >
-                            <Plus size={16} /> Add Challenge/Solution Pair
-                        </button>
+                        <div className="px-6 pb-6 pt-0">
+                           <button 
+                              onClick={addChallenge}
+                              className={`flex items-center gap-2 text-sm font-medium text-taxdome-blue hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors no-print ${isDownloading ? 'hidden' : ''}`}
+                          >
+                              <Plus size={16} /> Add Challenge/Solution Pair
+                          </button>
+                        </div>
                     </div>
-                </div>
-                
-                 {/* Footer Page 1 */}
-                <div className="page-padding py-8 mt-auto border-t border-gray-50 flex justify-between items-center text-xs text-gray-400">
-                    <span>TaxDome Proposal</span>
-                    <span>{new Date().getFullYear()}</span>
                 </div>
             </div>
             
-           
+            <ProposalFooter pageNum={1} />
         </div>
 
         {/* PAGE 2: Quote */}
-        <div className={`print-page w-full bg-white relative overflow-visible flex flex-col ${isDownloading ? '' : 'shadow-2xl min-h-[297mm] print:shadow-none'}`}>
+        {/* Added force-break-before for explicit separation in PDF flow */}
+        <div className={`print-page w-full bg-white relative overflow-visible flex flex-col ${isDownloading ? 'force-break-before' : 'shadow-2xl min-h-[297mm] print:shadow-none'}`}>
             
-             {/* Header */}
-             <div className="bg-gray-50 page-padding py-10 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
-                 <span className="text-2xl font-bold text-gray-400 tracking-tight">TaxDome</span>
-                <div className="text-xl font-bold text-gray-900">Investment Quote</div>
-            </div>
+             <ProposalHeader title="Investment Quote" />
 
             {/* Content Body */}
-            <div className="page-padding py-10 flex-grow">
+            <div className={`page-padding py-10 ${isDownloading ? '' : 'flex-grow'}`}>
                 <div className="grid grid-cols-1 gap-8">
                     
                     {/* Plan Card */}
                     <div className="border border-gray-200 rounded-3xl overflow-hidden shadow-lg shadow-gray-100/50 avoid-break">
-                        <div className="bg-taxdome-dark text-white p-6 flex justify-between items-center relative overflow-hidden">
+                        <div className="bg-taxdome-dark text-white p-6 flex justify-between items-center relative overflow-hidden print:bg-taxdome-dark print:-webkit-print-color-adjust:exact">
                              <div className="absolute top-0 right-0 w-48 h-48 bg-white opacity-5 rounded-full transform translate-x-10 -translate-y-10"></div>
                             <h2 className="text-2xl font-bold relative z-10">{proposalData.quote.planName}</h2>
                             <span className="px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full text-xs font-semibold relative z-10">Subscription</span>
@@ -441,9 +476,9 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                     </div>
 
                     {/* Onboarding Card */}
-                    <div className="border border-blue-100 bg-blue-50/30 rounded-3xl p-6 flex justify-between items-center relative avoid-break">
+                    <div className="border border-blue-100 bg-blue-50/30 rounded-3xl p-6 flex justify-between items-center relative avoid-break print:bg-blue-50 print:-webkit-print-color-adjust:exact">
                         <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-blue-100 text-taxdome-blue flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-xl bg-blue-100 text-taxdome-blue flex items-center justify-center print:bg-blue-100">
                                 <Rocket size={24} />
                             </div>
                             <div>
@@ -453,12 +488,12 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                                         value={proposalData.quote.onboarding.name} 
                                         onUpdate={(val) => updateOnboarding('name', val)}
                                     />
-                                    <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] uppercase font-bold tracking-wide">Implementation</span>
+                                    <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[10px] uppercase font-bold tracking-wide print:bg-blue-100 print:text-blue-700">Implementation</span>
                                 </h3>
                                 <ul className="text-sm text-gray-600 space-y-1 mt-2">
                                      {proposalData.quote.onboarding.features.map((f, i) => (
                                         <li key={i} className="flex items-center gap-2">
-                                            <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
+                                            <div className="w-1 h-1 bg-blue-400 rounded-full print:bg-blue-400"></div>
                                             <EditableText 
                                                 tag="span" 
                                                 value={f} 
@@ -485,7 +520,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                     </div>
 
                     {/* Total Calculation */}
-                    <div className="bg-taxdome-light rounded-2xl p-8 border border-blue-100/50 avoid-break">
+                    <div className="bg-taxdome-light rounded-2xl p-8 border border-blue-100/50 avoid-break print:bg-gray-50 print:-webkit-print-color-adjust:exact">
                         <h3 className="text-lg font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">Investment Summary</h3>
                         
                         <div className="flex justify-between items-center mb-3 text-gray-600 text-sm">
@@ -540,11 +575,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                 </div>
             </div>
 
-             {/* Footer Page 2 - Using natural flow (mt-auto) so it follows content */}
-            <div className="page-padding py-8 mt-auto border-t border-gray-50 flex justify-between items-center text-xs text-gray-400">
-                <span>TaxDome Proposal</span>
-                <span>{new Date().getFullYear()}</span>
-            </div>
+            <ProposalFooter pageNum={2} />
         </div>
 
       </div>

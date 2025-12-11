@@ -29,41 +29,37 @@
       }
     </script>
     <style>
-      /* Base font smoothing for consistency */
       body {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         text-rendering: optimizeLegibility;
       }
-
-      /* Consistent Page Padding */
       .page-padding {
         padding-left: 20mm !important;
         padding-right: 20mm !important;
       }
-
-      /* Styles specifically for the PDF generation context */
       .pdf-mode {
-        width: 210mm !important; /* Exact A4 width */
+        width: 210mm !important;
         min-width: 210mm !important;
         max-width: 210mm !important;
-        margin: 0 !important; /* Align to top-left to prevent capture offsets */
+        margin: 0 !important;
         background-color: white !important;
       }
-
       .pdf-mode .print-page {
         width: 100% !important;
-        min-height: 296mm !important; /* Slightly less than 297 to prevent overflow edge cases */
+        min-height: 0 !important;
         height: auto !important;
         margin: 0 !important;
         padding-bottom: 0 !important;
         box-shadow: none !important;
         border: none !important;
       }
-      
+      .force-break-before {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
       @media print {
         @page { margin: 0; size: A4; }
-        
         html, body {
           height: auto !important;
           min-height: 0 !important;
@@ -72,11 +68,8 @@
           padding: 0 !important;
           background: white !important;
         }
-
         body { -webkit-print-color-adjust: exact; }
         .no-print { display: none !important; }
-        
-        /* Reset background for the root app and all containers */
         #root, #root > div, #root > div > div {
            background-color: white !important;
            margin: 0 !important;
@@ -86,14 +79,12 @@
            overflow: visible !important;
            display: block !important;
         }
-
         .print-container { 
            width: 100% !important;
            max-width: none !important;
            margin: 0 !important;
            display: block !important;
         }
-        
         .print-page {
            box-shadow: none !important;
            margin: 0 !important;
@@ -107,19 +98,15 @@
            flex-direction: column;
            border: none !important;
         }
-        
         .print-page:last-child {
            page-break-after: auto;
         }
       }
-      
-      /* Strong break avoidance - works in both browser preview and print */
       .avoid-break {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
         position: relative;
       }
-
       .glass-panel {
         background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(20px);

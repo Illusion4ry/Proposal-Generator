@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { FirmData, PlanType, FEATURE_CATEGORIES, ONBOARDING_PACKAGES } from '../types';
-import { Loader2, ArrowRight, Check, Sparkles, Building, Users, FileText, AlertCircle, Shield, Zap, Briefcase, Star, LayoutGrid, MessageSquare, PlusCircle, Rocket, History, Globe, Settings2 } from 'lucide-react';
+import { Loader2, ArrowRight, Check, Sparkles, Building, Users, FileText, AlertCircle, Shield, Zap, Briefcase, Star, LayoutGrid, MessageSquare, PlusCircle, Rocket, Globe } from 'lucide-react';
 
 interface Props {
   onSubmit: (data: FirmData) => void;
   isGenerating: boolean;
   initialData?: FirmData | null;
-  onOpenHistory: () => void;
-  onOpenPromptSettings: () => void;
 }
 
-const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData, onOpenHistory, onOpenPromptSettings }) => {
+const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) => {
   const [step, setStep] = useState(1);
   const [activeCategory, setActiveCategory] = useState<string>(Object.keys(FEATURE_CATEGORIES)[0]);
   
@@ -54,6 +52,27 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData, onO
         ? prev.features.filter(f => f !== feat)
         : [...prev.features, feat]
     }));
+  };
+  
+  const handleQuickTest = () => {
+    const sampleData: FirmData = {
+      firmName: 'Summit Tax & Accounting',
+      contactName: 'David Williams',
+      firmSize: 5,
+      language: 'English',
+      selectedPlan: PlanType.BUSINESS,
+      selectedOnboarding: ONBOARDING_PACKAGES[1], // Guided
+      features: [
+        "Workflow Automation",
+        "Client Portal",
+        "Unlimited e-Signatures",
+        "CRM",
+        "Auto-reminders"
+      ],
+      transcript: "We are spending too much time chasing clients for documents. We need a system that sends automatic reminders. We also want a secure portal for clients to upload files.",
+      additionalContext: "Client values time-saving automation above all else."
+    };
+    onSubmit(sampleData);
   };
 
   const isStep1Valid = data.firmName && data.contactName && data.firmSize > 0;
@@ -101,21 +120,6 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData, onO
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
-      <div className="absolute top-6 right-6 z-20 flex gap-2">
-        <button 
-          onClick={onOpenPromptSettings}
-          className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur text-gray-600 rounded-full text-sm font-medium hover:bg-white hover:text-taxdome-blue hover:shadow-md transition-all border border-gray-100"
-        >
-          <Settings2 size={16} /> Customize Prompt
-        </button>
-        <button 
-          onClick={onOpenHistory}
-          className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur text-gray-600 rounded-full text-sm font-medium hover:bg-white hover:text-taxdome-blue hover:shadow-md transition-all border border-gray-100"
-        >
-          <History size={16} /> History
-        </button>
-      </div>
-
       <div className="mb-8 flex justify-between items-center relative max-w-xl mx-auto">
         <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200 -z-10"></div>
         {[1, 2, 3, 4].map((s) => (
@@ -418,7 +422,15 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData, onO
               Back
             </button>
           ) : (
-            <div></div> 
+            <button
+              onClick={handleQuickTest}
+              disabled={isGenerating}
+              type="button"
+              className="px-5 py-2.5 rounded-xl text-gray-400 font-medium hover:text-taxdome-blue hover:bg-blue-50 transition-colors text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Generate a sample proposal with dummy data"
+            >
+              <Zap size={16} /> Quick Demo
+            </button>
           )}
 
           {step < 4 ? (
