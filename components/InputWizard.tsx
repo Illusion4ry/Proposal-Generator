@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { FirmData, PlanType, FEATURE_CATEGORIES, ONBOARDING_PACKAGES } from '../types';
-import { Loader2, ArrowRight, Check, Sparkles, Building, Users, FileText, AlertCircle, Shield, Zap, Briefcase, Star, LayoutGrid, MessageSquare, PlusCircle, Rocket, History, Globe } from 'lucide-react';
+import { Loader2, ArrowRight, Check, Sparkles, Building, Users, FileText, AlertCircle, Shield, Zap, Briefcase, Star, LayoutGrid, MessageSquare, PlusCircle, Rocket, History, Globe, Settings2 } from 'lucide-react';
 
 interface Props {
   onSubmit: (data: FirmData) => void;
   isGenerating: boolean;
   initialData?: FirmData | null;
   onOpenHistory: () => void;
+  onOpenPromptSettings: () => void;
 }
 
-const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData, onOpenHistory }) => {
+const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData, onOpenHistory, onOpenPromptSettings }) => {
   const [step, setStep] = useState(1);
   const [activeCategory, setActiveCategory] = useState<string>(Object.keys(FEATURE_CATEGORIES)[0]);
   
@@ -100,7 +101,13 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData, onO
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
-      <div className="absolute top-6 right-6 z-20">
+      <div className="absolute top-6 right-6 z-20 flex gap-2">
+        <button 
+          onClick={onOpenPromptSettings}
+          className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur text-gray-600 rounded-full text-sm font-medium hover:bg-white hover:text-taxdome-blue hover:shadow-md transition-all border border-gray-100"
+        >
+          <Settings2 size={16} /> Customize Prompt
+        </button>
         <button 
           onClick={onOpenHistory}
           className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur text-gray-600 rounded-full text-sm font-medium hover:bg-white hover:text-taxdome-blue hover:shadow-md transition-all border border-gray-100"

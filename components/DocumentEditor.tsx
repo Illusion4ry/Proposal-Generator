@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { FirmData, ProposalContent } from '../types';
-import { Download, Printer, ArrowLeft, Edit3, CheckCircle, Check, Loader2, Plus, Trash2, Globe, Rocket, Info, PlusCircle, Save, Cloud } from 'lucide-react';
+import { Download, Printer, ArrowLeft, Edit3, CheckCircle, Check, Loader2, Plus, Trash2, Globe, Rocket, Info, PlusCircle, Save, Cloud, XCircle, ArrowRight } from 'lucide-react';
 
 interface Props {
   firmData: FirmData;
@@ -151,6 +151,27 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
     updateContent(section, listName, newList);
   };
 
+  // Specialized helpers for Challenge/Solution
+  const addChallenge = () => {
+    const current = proposalData.executiveSummary.challengesAndSolutions || [];
+    const updated = [...current, { problem: "New Challenge", solution: "TaxDome Solution" }];
+    updateContent('executiveSummary', 'challengesAndSolutions', updated);
+  };
+
+  const removeChallenge = (index: number) => {
+    const current = proposalData.executiveSummary.challengesAndSolutions || [];
+    const updated = current.filter((_, i) => i !== index);
+    updateContent('executiveSummary', 'challengesAndSolutions', updated);
+  };
+
+  const updateChallenge = (index: number, field: 'problem' | 'solution', value: string) => {
+    const current = [...(proposalData.executiveSummary.challengesAndSolutions || [])];
+    if (current[index]) {
+      current[index] = { ...current[index], [field]: value };
+      updateContent('executiveSummary', 'challengesAndSolutions', current);
+    }
+  };
+
   return (
     <div className="w-full min-h-screen bg-gray-100 pb-20 font-sans print:bg-white print:pb-0 print:h-auto print:overflow-visible">
       {/* Toolbar */}
@@ -243,9 +264,9 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                 </div>
             </div>
 
-            <div className="page-padding pt-12 flex-grow">
+            <div className="page-padding pt-12 flex-grow flex flex-col">
                 {/* Executive Summary Content */}
-                <div className="prose prose-lg max-w-none">
+                <div className="prose prose-lg max-w-none flex-grow">
                     <div className="flex items-center gap-3 mb-6 pb-2 border-b border-gray-100">
                       <div className="w-1 h-8 bg-taxdome-blue rounded-full"></div>
                       <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider m-0">Executive Summary</h2>
@@ -267,50 +288,83 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                         />
                     </div>
 
-                    <div className="bg-taxdome-light rounded-2xl p-8 border border-blue-50 avoid-break">
-                        <h3 className="text-taxdome-dark font-bold mb-6 flex items-center gap-3 text-lg">
-                            <div className="p-2 bg-white rounded-lg shadow-sm text-taxdome-blue">
+                    <div className="bg-white rounded-2xl avoid-break">
+                        <h3 className="text-gray-900 font-bold mb-6 flex items-center gap-3 text-lg">
+                            <div className="p-2 bg-blue-50 rounded-lg shadow-sm text-taxdome-blue">
                               <Globe size={20} />
                             </div>
-                            Key Strategic Benefits
+                            Strategic Goals & Solutions
                         </h3>
-                        <ul className="space-y-4">
-                            {proposalData.executiveSummary.keyBenefits.map((benefit, i) => (
-                                <li key={i} className="group flex items-start gap-4 relative pl-2">
-                                    <div className="w-2 h-2 rounded-full bg-taxdome-blue mt-2.5 flex-shrink-0" />
-                                    <div className="flex-grow">
-                                        <EditableText 
-                                            tag="span" 
-                                            value={benefit} 
-                                            onUpdate={(val) => updateItem('executiveSummary', 'keyBenefits', i, val)}
-                                            className="text-gray-700 block"
-                                        />
+                        
+                        {/* New Structured Challenge/Solution Grid */}
+                        <div className="space-y-4">
+                            {(proposalData.executiveSummary.challengesAndSolutions || []).map((item, i) => (
+                              <div key={i} className="group flex gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all relative">
+                                 <div className="flex-1">
+                                    <div className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                      <XCircle size={12} /> Current Challenge
                                     </div>
-                                    <button 
-                                        onClick={() => removeItem('executiveSummary', 'keyBenefits', i)}
-                                        className={`absolute -right-8 top-1 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-md opacity-0 group-hover:opacity-100 transition-all no-print ${isDownloading ? 'hidden' : ''}`}
-                                        title="Remove item"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </li>
+                                    <EditableText 
+                                      tag="div" 
+                                      value={item.problem}
+                                      onUpdate={(val) => updateChallenge(i, 'problem', val)}
+                                      className="text-gray-700 font-medium text-sm leading-relaxed"
+                                    />
+                                 </div>
+                                 <div className="flex items-center justify-center text-gray-300">
+                                    <ArrowRight size={20} />
+                                 </div>
+                                 <div className="flex-1">
+                                    <div className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                      <CheckCircle size={12} /> TaxDome Solution
+                                    </div>
+                                    <EditableText 
+                                      tag="div" 
+                                      value={item.solution}
+                                      onUpdate={(val) => updateChallenge(i, 'solution', val)}
+                                      className="text-gray-900 font-medium text-sm leading-relaxed"
+                                    />
+                                 </div>
+                                 <button 
+                                      onClick={() => removeChallenge(i)}
+                                      className={`absolute top-2 right-2 p-1.5 text-gray-300 hover:text-red-500 rounded-md opacity-0 group-hover:opacity-100 transition-all no-print ${isDownloading ? 'hidden' : ''}`}
+                                      title="Remove item"
+                                  >
+                                      <Trash2 size={14} />
+                                  </button>
+                              </div>
                             ))}
-                        </ul>
+
+                            {/* Legacy Fallback for old saves */}
+                            {(!proposalData.executiveSummary.challengesAndSolutions) && proposalData.executiveSummary.keyBenefits && (
+                                <ul className="space-y-4">
+                                  {proposalData.executiveSummary.keyBenefits.map((benefit, i) => (
+                                    <li key={i} className="flex items-start gap-4">
+                                        <div className="w-2 h-2 rounded-full bg-taxdome-blue mt-2.5 flex-shrink-0" />
+                                        <span className="text-gray-700">{benefit}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                            )}
+                        </div>
+
                         <button 
-                            onClick={() => addItem('executiveSummary', 'keyBenefits')}
+                            onClick={addChallenge}
                             className={`mt-6 flex items-center gap-2 text-sm font-medium text-taxdome-blue hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors no-print ${isDownloading ? 'hidden' : ''}`}
                         >
-                            <Plus size={16} /> Add Benefit
+                            <Plus size={16} /> Add Challenge/Solution Pair
                         </button>
                     </div>
                 </div>
+                
+                 {/* Footer Page 1 */}
+                <div className="page-padding py-8 mt-auto border-t border-gray-50 flex justify-between items-center text-xs text-gray-400">
+                    <span>TaxDome Proposal</span>
+                    <span>{new Date().getFullYear()}</span>
+                </div>
             </div>
             
-            {/* Footer Page 1 */}
-            <div className="page-padding py-8 mt-auto border-t border-gray-50 flex justify-between items-center text-xs text-gray-400">
-                <span>TaxDome Proposal</span>
-                <span>{new Date().getFullYear()}</span>
-            </div>
+           
         </div>
 
         {/* PAGE 2: Quote */}

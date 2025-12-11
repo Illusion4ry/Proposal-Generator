@@ -4,69 +4,98 @@ import { FirmData, ProposalContent } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const SYSTEM_INSTRUCTION = `
-You are a top-tier Sales Engineer for TaxDome, a practice management platform for accounting firms. 
+You are a top-tier Sales Engineer for TaxDome.
 Your goal is to generate a high-converting, professional Executive Summary and Pricing Quote.
-The tone should be professional, empathetic, and persuasive.
-You MUST use the 'googleSearch' tool to find the current pricing for TaxDome (specifically looking for the User's selected plan on taxdome.com/pricing).
-Always assume standard annual billing unless context suggests otherwise.
-IMPORTANT: You must return the final response as a valid JSON object. Do not include markdown formatting or explanations outside the JSON.
-IMPORTANT: All generated text content MUST be in the requested language (English or Spanish).
+Tone: Professional, empathetic, persuasive, and concise.
+Search Tool: You MUST use 'googleSearch' to find current pricing for the user's plan on taxdome.com/pricing.
+Format: Return ONLY valid JSON. No markdown.
+Language: Respect the requested OUTPUT LANGUAGE for all text.
 `;
 
-export const generateProposal = async (data: FirmData): Promise<ProposalContent> => {
-  const prompt = `
-    Please generate a sales proposal for a prospective client.
-    
-    Client Details:
-    - Firm Name: ${data.firmName}
-    - Contact Person: ${data.contactName}
-    - Size: ${data.firmSize} employees
-    - Interested in Plan: ${data.selectedPlan}
-    - Selected Onboarding Package: ${data.selectedOnboarding.name} (Price: ${data.selectedOnboarding.priceDisplay})
-    - Onboarding Features: ${data.selectedOnboarding.features.join(", ")}
-    - Key Features Desired: ${data.features.join(", ")}
-    - OUTPUT LANGUAGE: ${data.language} (The entire response must be in this language)
-    
-    Additional Context:
-    - Discovery Call Transcript: "${data.transcript || "None provided."}"
-    - Executive Notes (Private Context): "${data.additionalContext || "None provided."}"
-    
-    Task:
-    1. Search for the CURRENT pricing of the "${data.selectedPlan}" on taxdome.com/pricing.
-    2. Create an Executive Summary in ${data.language}.
-       - CRITICAL CONSTRAINT: The body must be strictly ONE single paragraph.
-       - CRITICAL CONSTRAINT: The body must be exactly 4 to 5 sentences long.
-       - CRITICAL CONSTRAINT: The "Key Strategic Benefits" must be derived directly from the specific pains and challenges found in the "Discovery Call Transcript". If the transcript is empty, use general industry pains relevant to the features selected.
-    3. Create a Quote section in ${data.language}.
-       - Calculate Software Cost = ${data.firmSize} users * [Found Annual Price].
-       - Onboarding Cost = ${data.selectedOnboarding.price}.
-       - Grand Total = Software Cost + Onboarding Cost.
+export const DEFAULT_PROMPT_TEMPLATE = `
+Please generate a sales proposal for a prospective client.
 
-    OUTPUT FORMAT:
-    Return a single JSON object with the following structure. Do not use Markdown code blocks.
+Client Details:
+- Firm Name: {{firmName}}
+- Contact Person: {{contactName}}
+- Size: {{firmSize}} employees
+- Plan: {{selectedPlan}}
+- Onboarding: {{onboardingName}} ({{onboardingPrice}})
+- Onboarding Features: {{onboardingFeatures}}
+- Key Features: {{desiredFeatures}}
+- OUTPUT LANGUAGE: {{language}}
 
-    {
-      "executiveSummary": {
-        "title": "A catchy title for the summary (in ${data.language})",
-        "body": "Strictly one paragraph, 4-5 sentences, in ${data.language}, addressing their specific pains.",
-        "keyBenefits": ["Benefit 1 (in ${data.language})", "Benefit 2", "Benefit 3"]
-      },
-      "quote": {
-        "planName": "${data.selectedPlan} (Translate 'Essentials/Pro/Business' only if commonly translated, otherwise keep Brand Name)",
-        "pricePerUser": "The found price per user/year",
-        "billingFrequency": "billed annually (in ${data.language})",
-        "softwareTotal": "Calculated total for just the software subscription",
-        "onboarding": {
-          "name": "${data.selectedOnboarding.name} (in ${data.language})",
-          "price": "${data.selectedOnboarding.priceDisplay}",
-          "features": ["List 2-3 key onboarding features (in ${data.language})"]
-        },
-        "totalAnnualCost": "Grand total including onboarding (formatted string like $12,999)",
-        "featuresList": ["List 5-7 key features included in this plan (in ${data.language})"],
-        "closingStatement": "A strong closing sentence calling them to action (in ${data.language})."
-      }
-    }
-  `;
+Context:
+- Transcript: "{{transcript}}"
+- Notes: "{{context}}"
+
+Task:
+1. Search taxdome.com/pricing for the CURRENT annual price of "{{selectedPlan}}".
+2. Create an Executive Summary in {{language}}.
+   - Overview: Strictly ONE paragraph, 4-5 sentences.
+   - Challenges & Solutions: Identify 3 specific pains/problems from the transcript (or imply from features if transcript missing). Map each to a specific TaxDome solution. Be concise.
+3. Create a Quote in {{language}}.
+   - Software = {{firmSize}} * [Found Price].
+   - Total = Software + {{onboardingPrice}}.
+
+OUTPUT JSON FORMAT:
+{
+  "executiveSummary": {
+    "title": "A catchy title (in {{language}})",
+    "body": "The 4-5 sentence overview paragraph (in {{language}})",
+    "challengesAndSolutions": [
+      { "problem": "Specific client pain point (e.g. 'Chasing clients for documents')", "solution": "How TaxDome solves it (e.g. 'Automated reminders & mobile app')" },
+      { "problem": "...", "solution": "..." },
+      { "problem": "...", "solution": "..." }
+    ]
+  },
+  "quote": {
+    "planName": "{{selectedPlan}}",
+    "pricePerUser": "Found price/user/year",
+    "billingFrequency": "billed annually (in {{language}})",
+    "softwareTotal": "Calculated total",
+    "onboarding": {
+      "name": "{{onboardingName}} (in {{language}})",
+      "price": "{{onboardingPrice}}",
+      "features": ["2-3 key onboarding features (in {{language}})"]
+    },
+    "totalAnnualCost": "Grand total string",
+    "featuresList": ["5-7 key features (in {{language}})"],
+    "closingStatement": "Action-oriented closing (in {{language}})"
+  }
+}
+`;
+
+/**
+ * Replaces {{variable}} placeholders in the template with actual data.
+ */
+const hydratePrompt = (template: string, data: FirmData): string => {
+  let prompt = template;
+  
+  const replacements: Record<string, string> = {
+    '{{firmName}}': data.firmName,
+    '{{contactName}}': data.contactName,
+    '{{firmSize}}': data.firmSize.toString(),
+    '{{selectedPlan}}': data.selectedPlan,
+    '{{onboardingName}}': data.selectedOnboarding.name,
+    '{{onboardingPrice}}': data.selectedOnboarding.priceDisplay,
+    '{{onboardingFeatures}}': data.selectedOnboarding.features.join(", "),
+    '{{desiredFeatures}}': data.features.join(", "),
+    '{{language}}': data.language,
+    '{{transcript}}': data.transcript || "None provided",
+    '{{context}}': data.additionalContext || "None provided"
+  };
+
+  Object.entries(replacements).forEach(([key, value]) => {
+    prompt = prompt.split(key).join(value);
+  });
+
+  return prompt;
+};
+
+export const generateProposal = async (data: FirmData, customTemplate?: string): Promise<ProposalContent> => {
+  const template = customTemplate || DEFAULT_PROMPT_TEMPLATE;
+  const prompt = hydratePrompt(template, data);
 
   try {
     const response = await ai.models.generateContent({
@@ -81,9 +110,7 @@ export const generateProposal = async (data: FirmData): Promise<ProposalContent>
     let text = response.text;
     if (!text) throw new Error("No response from AI");
 
-    // Clean up potential markdown code blocks
     text = text.replace(/```json\n?|```/g, '').trim();
-
     return JSON.parse(text) as ProposalContent;
 
   } catch (error) {

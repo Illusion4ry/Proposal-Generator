@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FirmData, ProposalContent, SavedProposal } from './types';
 import InputWizard from './components/InputWizard';
 import DocumentEditor from './components/DocumentEditor';
 import HistoryModal from './components/HistoryModal';
+import PromptModal from './components/PromptModal';
 import { getSavedProposals, saveProposalToStorage, deleteProposalFromStorage } from './services/storageService';
 import { generateProposal } from './services/geminiService';
 import { Layout } from 'lucide-react';
@@ -19,6 +20,21 @@ const App: React.FC = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [currentProposalId, setCurrentProposalId] = useState<string | null>(null);
   const [savedProposals, setSavedProposals] = useState<SavedProposal[]>([]);
+
+  // Prompt Configuration State
+  const [showPromptSettings, setShowPromptSettings] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState<string | null>(null);
+
+  // Load prompt pref on mount
+  useEffect(() => {
+    const savedPrompt = localStorage.getItem('taxdome_custom_prompt_v1');
+    if (savedPrompt) setCustomPrompt(savedPrompt);
+  }, []);
+
+  const handleSavePrompt = (newPrompt: string) => {
+    setCustomPrompt(newPrompt);
+    localStorage.setItem('taxdome_custom_prompt_v1', newPrompt);
+  };
 
   // Load history from "Cloud"
   const handleOpenHistory = async () => {
@@ -57,7 +73,8 @@ const App: React.FC = () => {
     setFirmData(data);
     
     try {
-      const content = await generateProposal(data);
+      // Pass the custom prompt if it exists, otherwise undefined (which defaults to standard in service)
+      const content = await generateProposal(data, customPrompt || undefined);
       setProposalContent(content);
       setCurrentProposalId(null); // Reset ID for new generation
       setView('editor');
@@ -108,6 +125,13 @@ const App: React.FC = () => {
         onDelete={handleDeleteHistoryItem}
       />
 
+      <PromptModal
+        isOpen={showPromptSettings}
+        onClose={() => setShowPromptSettings(false)}
+        currentPrompt={customPrompt}
+        onSave={handleSavePrompt}
+      />
+
       {view === 'input' ? (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col items-center py-12 px-4 relative overflow-hidden">
           
@@ -131,6 +155,7 @@ const App: React.FC = () => {
               isGenerating={isGenerating} 
               initialData={firmData}
               onOpenHistory={handleOpenHistory}
+              onOpenPromptSettings={() => setShowPromptSettings(true)}
             />
           </main>
           

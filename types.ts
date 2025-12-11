@@ -25,23 +25,31 @@ export interface FirmData {
   additionalContext: string;
 }
 
+export interface ChallengeSolution {
+  problem: string;
+  solution: string;
+}
+
 export interface ProposalContent {
   executiveSummary: {
     title: string;
-    body: string; // HTML string allowed for rich text
-    keyBenefits: string[];
+    body: string; // The 4-5 sentence overview
+    // New structured format
+    challengesAndSolutions?: ChallengeSolution[]; 
+    // Legacy support for older saves
+    keyBenefits?: string[]; 
   };
   quote: {
     planName: string;
     pricePerUser: string;
-    billingFrequency: string; // e.g., "billed annually"
+    billingFrequency: string;
     softwareTotal: string;
     onboarding: {
       name: string;
       price: string;
       features: string[];
     };
-    totalAnnualCost: string; // Grand total (Software + Onboarding)
+    totalAnnualCost: string;
     featuresList: string[];
     closingStatement: string;
   };
