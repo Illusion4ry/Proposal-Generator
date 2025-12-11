@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { FirmData, PlanType, FEATURE_CATEGORIES, ONBOARDING_PACKAGES } from '../types';
-import { Loader2, ArrowRight, Check, Sparkles, Building, Users, FileText, AlertCircle, Shield, Zap, Briefcase, Star, LayoutGrid, MessageSquare, PlusCircle, Rocket } from 'lucide-react';
+import { Loader2, ArrowRight, Check, Sparkles, Building, Users, FileText, AlertCircle, Shield, Zap, Briefcase, Star, LayoutGrid, MessageSquare, PlusCircle, Rocket, History, Globe } from 'lucide-react';
 
 interface Props {
   onSubmit: (data: FirmData) => void;
   isGenerating: boolean;
   initialData?: FirmData | null;
+  onOpenHistory: () => void;
 }
 
-const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) => {
+const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData, onOpenHistory }) => {
   const [step, setStep] = useState(1);
   const [activeCategory, setActiveCategory] = useState<string>(Object.keys(FEATURE_CATEGORIES)[0]);
   
@@ -16,12 +17,24 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     firmName: '',
     contactName: '',
     firmSize: 1,
+    language: 'English',
     selectedPlan: PlanType.PRO,
     selectedOnboarding: ONBOARDING_PACKAGES[0],
     features: [],
     transcript: '',
     additionalContext: ''
   });
+
+  // Reset or load data when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setData({
+        ...initialData,
+        language: initialData.language || 'English' // Default to English for old saves
+      });
+      setStep(1); 
+    }
+  }, [initialData]);
 
   // Auto-switch away from Essentials if user count increases
   useEffect(() => {
@@ -87,6 +100,15 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
+      <div className="absolute top-6 right-6 z-20">
+        <button 
+          onClick={onOpenHistory}
+          className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur text-gray-600 rounded-full text-sm font-medium hover:bg-white hover:text-taxdome-blue hover:shadow-md transition-all border border-gray-100"
+        >
+          <History size={16} /> History
+        </button>
+      </div>
+
       <div className="mb-8 flex justify-between items-center relative max-w-xl mx-auto">
         <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200 -z-10"></div>
         {[1, 2, 3, 4].map((s) => (
@@ -111,6 +133,25 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
               </div>
 
               <div className="space-y-5 max-w-lg mx-auto">
+                <div className="group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 ml-1">Proposal Language</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['English', 'Spanish'].map((lang) => (
+                      <button
+                        key={lang}
+                        onClick={() => setData({...data, language: lang as 'English' | 'Spanish'})}
+                        className={`px-4 py-3 rounded-xl border font-medium text-sm transition-all flex items-center justify-center gap-2 ${
+                          data.language === lang 
+                          ? 'bg-taxdome-blue text-white border-taxdome-blue shadow-md' 
+                          : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                         <Globe size={16} /> {lang}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="group">
                   <label className="block text-sm font-medium text-gray-700 mb-1 ml-1">Firm Name</label>
                   <div className="relative">

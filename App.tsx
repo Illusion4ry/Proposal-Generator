@@ -1,15 +1,56 @@
 import React, { useState } from 'react';
-import { FirmData, ProposalContent } from './types';
+import { FirmData, ProposalContent, SavedProposal } from './types';
 import InputWizard from './components/InputWizard';
 import DocumentEditor from './components/DocumentEditor';
+import HistoryModal from './components/HistoryModal';
+import { getSavedProposals, saveProposalToStorage, deleteProposalFromStorage } from './services/storageService';
 import { generateProposal } from './services/geminiService';
 import { Layout } from 'lucide-react';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'input' | 'editor'>('input');
   const [isGenerating, setIsGenerating] = useState(false);
+  
   const [firmData, setFirmData] = useState<FirmData | null>(null);
   const [proposalContent, setProposalContent] = useState<ProposalContent | null>(null);
+  
+  // History State
+  const [showHistory, setShowHistory] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [currentProposalId, setCurrentProposalId] = useState<string | null>(null);
+  const [savedProposals, setSavedProposals] = useState<SavedProposal[]>([]);
+
+  // Load history from "Cloud"
+  const handleOpenHistory = async () => {
+    setShowHistory(true);
+    setIsLoadingHistory(true);
+    try {
+      const proposals = await getSavedProposals();
+      setSavedProposals(proposals);
+    } catch (error) {
+      console.error("Failed to load proposals", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const handleSelectHistoryItem = (proposal: SavedProposal) => {
+    setFirmData(proposal.firmData);
+    setProposalContent(proposal.content);
+    setCurrentProposalId(proposal.id);
+    setShowHistory(false);
+    setView('editor');
+  };
+
+  const handleDeleteHistoryItem = async (id: string) => {
+    if (confirm("Are you sure you want to delete this saved proposal from the cloud?")) {
+      setIsLoadingHistory(true); // Show loading inside modal if possible, or simple re-fetch
+      await deleteProposalFromStorage(id);
+      const updated = await getSavedProposals();
+      setSavedProposals(updated);
+      setIsLoadingHistory(false);
+    }
+  };
 
   const handleGenerate = async (data: FirmData) => {
     setIsGenerating(true);
@@ -18,12 +59,31 @@ const App: React.FC = () => {
     try {
       const content = await generateProposal(data);
       setProposalContent(content);
+      setCurrentProposalId(null); // Reset ID for new generation
       setView('editor');
     } catch (error) {
       alert("Failed to generate the proposal. Please check your connection and try again.");
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleSaveProposal = async (updatedContent: ProposalContent) => {
+    if (!firmData) return;
+
+    const timestamp = Date.now();
+    const id = currentProposalId || `prop_${timestamp}`;
+    
+    const proposalToSave: SavedProposal = {
+      id,
+      createdAt: currentProposalId ? (savedProposals.find(p => p.id === id)?.createdAt || timestamp) : timestamp,
+      lastModified: timestamp,
+      firmData: firmData,
+      content: updatedContent
+    };
+
+    await saveProposalToStorage(proposalToSave);
+    setCurrentProposalId(id); // Ensure future saves update this record
   };
 
   const handleBack = () => {
@@ -33,11 +93,21 @@ const App: React.FC = () => {
   const handleNewProposal = () => {
     setFirmData(null);
     setProposalContent(null);
+    setCurrentProposalId(null);
     setView('input');
   };
 
   return (
     <div className="min-h-screen font-sans">
+      <HistoryModal 
+        isOpen={showHistory}
+        isLoading={isLoadingHistory}
+        onClose={() => setShowHistory(false)}
+        proposals={savedProposals}
+        onSelect={handleSelectHistoryItem}
+        onDelete={handleDeleteHistoryItem}
+      />
+
       {view === 'input' ? (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col items-center py-12 px-4 relative overflow-hidden">
           
@@ -60,6 +130,7 @@ const App: React.FC = () => {
               onSubmit={handleGenerate} 
               isGenerating={isGenerating} 
               initialData={firmData}
+              onOpenHistory={handleOpenHistory}
             />
           </main>
           
@@ -73,6 +144,7 @@ const App: React.FC = () => {
           content={proposalContent!} 
           onBack={handleBack}
           onNew={handleNewProposal}
+          onSave={handleSaveProposal}
         />
       )}
     </div>

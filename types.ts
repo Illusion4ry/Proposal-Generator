@@ -17,6 +17,7 @@ export interface FirmData {
   firmName: string;
   firmSize: number;
   contactName: string;
+  language: 'English' | 'Spanish';
   selectedPlan: PlanType;
   selectedOnboarding: OnboardingPackage;
   features: string[];
@@ -44,6 +45,14 @@ export interface ProposalContent {
     featuresList: string[];
     closingStatement: string;
   };
+}
+
+export interface SavedProposal {
+  id: string;
+  createdAt: number;
+  lastModified: number;
+  firmData: FirmData;
+  content: ProposalContent;
 }
 
 export const FEATURE_CATEGORIES = {
