@@ -38,75 +38,65 @@
         padding-left: 20mm !important;
         padding-right: 20mm !important;
       }
+      
+      /* PDF Mode Styles - strict A4 sizing */
       .pdf-mode {
         width: 210mm !important;
-        min-width: 210mm !important;
-        max-width: 210mm !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
         background-color: white !important;
       }
+      
       .pdf-mode .print-page {
-        width: 100% !important;
-        min-height: 0 !important;
-        height: auto !important;
+        width: 210mm !important;
+        height: 296.5mm !important; /* Exact A4 height minus tiny buffer to prevent overflow */
         margin: 0 !important;
-        padding-bottom: 0 !important;
-        box-shadow: none !important;
+        padding: 0 !important;
+        overflow: hidden !important; /* Critical: crop content like decorative circles */
+        page-break-after: always !important;
+        background: white !important;
+        position: relative !important;
+        display: flex !important;
+        flex-direction: column !important;
         border: none !important;
+        box-shadow: none !important;
       }
+      
+      .pdf-mode .print-page:last-child {
+        page-break-after: avoid !important;
+      }
+
+      /* Utility to force breaks if needed, though fixed height usually handles it */
       .force-break-before {
         page-break-before: always !important;
-        break-before: page !important;
       }
+      
+      .avoid-break {
+        page-break-inside: avoid !important;
+      }
+
+      /* Print Media Styles (CMD+P) */
       @media print {
         @page { margin: 0; size: A4; }
         html, body {
-          height: auto !important;
-          min-height: 0 !important;
+          height: 100%;
           overflow: visible !important;
-          margin: 0 !important;
-          padding: 0 !important;
           background: white !important;
         }
-        body { -webkit-print-color-adjust: exact; }
+        
         .no-print { display: none !important; }
-        #root, #root > div, #root > div > div {
-           background-color: white !important;
-           margin: 0 !important;
-           padding: 0 !important;
-           height: auto !important;
-           min-height: 0 !important;
-           overflow: visible !important;
-           display: block !important;
+        
+        .print-container {
+          width: 100% !important;
         }
-        .print-container { 
-           width: 100% !important;
-           max-width: none !important;
-           margin: 0 !important;
-           display: block !important;
-        }
+        
         .print-page {
-           box-shadow: none !important;
-           margin: 0 !important;
-           page-break-after: always;
-           width: 100% !important;
-           min-height: 297mm !important; 
-           height: auto !important;
-           overflow: visible !important;
-           background: white !important;
-           display: flex;
-           flex-direction: column;
-           border: none !important;
-        }
-        .print-page:last-child {
-           page-break-after: auto;
+          page-break-after: always;
+          width: 100% !important;
+          height: 297mm !important;
+          overflow: hidden !important;
         }
       }
-      .avoid-break {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-        position: relative;
-      }
+
       .glass-panel {
         background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(20px);

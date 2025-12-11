@@ -134,7 +134,26 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
         ))}
       </div>
 
-      <div className="glass-panel p-8 rounded-3xl shadow-xl min-h-[600px] flex flex-col justify-between transition-all duration-500">
+      <div className="glass-panel p-8 rounded-3xl shadow-xl min-h-[600px] flex flex-col justify-between transition-all duration-500 relative overflow-hidden">
+        
+        {/* Loading Overlay */}
+        {isGenerating && (
+            <div className="absolute inset-0 z-50 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
+                <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center max-w-sm text-center border border-gray-100 transform animate-in zoom-in-95 duration-300">
+                    <div className="relative mb-6">
+                        <div className="absolute inset-0 bg-blue-400 rounded-full animate-ping opacity-20"></div>
+                        <div className="relative bg-blue-50 p-4 rounded-full text-taxdome-blue">
+                            <Loader2 size={40} className="animate-spin" />
+                        </div>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Generating Proposal</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed">
+                        AI is analyzing your requirements and fetching real-time pricing from taxdome.com...
+                    </p>
+                </div>
+            </div>
+        )}
+
         <div>
           {step === 1 && (
             <div className="animate-fade-in space-y-6">

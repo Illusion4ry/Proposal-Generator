@@ -78,7 +78,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
 
     setIsDownloading(true);
 
-    // Wait for state update to remove gaps/shadows before capturing
+    // Give the DOM a moment to update styles (remove shadows, etc.) before capturing
     setTimeout(async () => {
       const element = containerRef.current;
       const opt = {
@@ -90,11 +90,13 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
           useCORS: true, 
           letterRendering: true, 
           scrollY: 0,
+          // Removed explicit windowWidth to let it respect the 210mm container width naturally
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { 
-          mode: ['css', 'legacy'],
-          avoid: '.avoid-break' 
+          // 'avoid-all' prevents breaking inside elements, 'css' respects page-break properties
+          // 'legacy' is sometimes safer for strict positioning
+          mode: ['css', 'legacy'] 
         }
       };
 
@@ -201,7 +203,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
   );
 
   const ProposalFooter = ({ pageNum }: { pageNum: number }) => (
-    <div className={`mt-auto bg-gray-50 border-t border-gray-100 page-padding py-6 print:bg-gray-50 print:-webkit-print-color-adjust:exact ${isDownloading ? 'mt-8' : ''}`}>
+    <div className={`bg-gray-50 border-t border-gray-100 page-padding py-6 print:bg-gray-50 print:-webkit-print-color-adjust:exact mt-auto`}>
        <div className="flex justify-between items-center text-xs text-gray-500">
           <div className="flex gap-4">
             <span className="font-semibold text-gray-400">TaxDome Proposal</span>
@@ -287,8 +289,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
             
             <ProposalHeader title="Executive Summary" />
 
-            {/* Note: Remove flex-grow when downloading to let content flow naturally without forced whitespace */}
-            <div className={`page-padding pt-10 flex flex-col ${isDownloading ? '' : 'flex-grow'}`}>
+            <div className={`page-padding pt-10 flex flex-col flex-grow`}>
                 {/* Info Bar */}
                 <div className="flex gap-8 mb-10 text-sm border-b border-gray-100 pb-4">
                   <div>
@@ -311,7 +312,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                 </div>
 
                 {/* Executive Summary Content */}
-                <div className={`prose prose-lg max-w-none ${isDownloading ? '' : 'flex-grow'}`}>
+                <div className={`prose prose-lg max-w-none flex-grow`}>
                     <EditableText 
                         tag="h3" 
                         value={proposalData.executiveSummary.title}
@@ -328,7 +329,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                         />
                     </div>
 
-                    <div className="bg-white rounded-2xl avoid-break border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-2xl avoid-break border border-gray-100 shadow-sm overflow-hidden mb-8">
                         <div className="bg-gray-50 px-6 py-4 border-b border-gray-100">
                           <h3 className="text-gray-900 font-bold flex items-center gap-3 text-lg m-0">
                               <div className="p-1.5 bg-white rounded-md shadow-sm text-taxdome-blue">
@@ -338,10 +339,9 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                           </h3>
                         </div>
                         
-                        {/* New Structured Challenge/Solution Grid */}
                         <div className="p-6 space-y-4">
                             {(proposalData.executiveSummary.challengesAndSolutions || []).map((item, i) => (
-                              <div key={i} className="group flex gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all relative">
+                              <div key={i} className="group flex gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-white hover:border-blue-100 hover:shadow-sm transition-all relative avoid-break">
                                  <div className="flex-1">
                                     <div className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1 flex items-center gap-1">
                                       <XCircle size={12} /> Current Challenge
@@ -412,7 +412,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
              <ProposalHeader title="Investment Quote" />
 
             {/* Content Body */}
-            <div className={`page-padding py-10 ${isDownloading ? '' : 'flex-grow'}`}>
+            <div className={`page-padding py-10 flex-grow`}>
                 <div className="grid grid-cols-1 gap-8">
                     
                     {/* Plan Card */}
