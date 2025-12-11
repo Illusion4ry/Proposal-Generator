@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { FirmData, PlanType, FEATURE_CATEGORIES, ONBOARDING_PACKAGES, AccountExecutive } from '../types';
-import { Loader2, ArrowRight, Check, Sparkles, Building, Users, FileText, AlertCircle, Rocket, Globe, UserCheck, Mail, Plus, Trash2, X, ChevronDown } from 'lucide-react';
+import { getAccountExecutives, saveAccountExecutives } from '../services/storageService';
+import { Loader2, ArrowRight, Check, Sparkles, Building, Users, FileText, AlertCircle, Rocket, Globe, UserCheck, Mail, Plus, Trash2, X, ChevronDown, Cloud } from 'lucide-react';
 
 interface Props {
   onSubmit: (data: FirmData) => void;
@@ -21,6 +22,7 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
   
   // Account Executive State
   const [availableAes, setAvailableAes] = useState<AccountExecutive[]>([]);
+  const [isLoadingAes, setIsLoadingAes] = useState(true);
   const [showAeModal, setShowAeModal] = useState(false);
   const [newAeName, setNewAeName] = useState('');
   const [newAeEmail, setNewAeEmail] = useState('');
@@ -39,18 +41,35 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     accountExecutive: DEFAULT_AE
   });
 
-  // Load AEs from local storage
+  // Load AEs from storage service (Cloud/Local)
   useEffect(() => {
-    const savedAes = localStorage.getItem('taxdome_aes_list');
-    if (savedAes) {
-      setAvailableAes(JSON.parse(savedAes));
-    } else {
-      // Initialize with default if empty
-      const initial = [DEFAULT_AE];
-      setAvailableAes(initial);
-      localStorage.setItem('taxdome_aes_list', JSON.stringify(initial));
-    }
-  }, []);
+    const loadAes = async () => {
+      setIsLoadingAes(true);
+      try {
+        const aes = await getAccountExecutives();
+        if (aes && aes.length > 0) {
+          setAvailableAes(aes);
+          // If no AE selected yet, pick first one
+          if (data.accountExecutive.id === DEFAULT_AE.id && !initialData) {
+              setData(prev => ({ ...prev, accountExecutive: aes[0] }));
+          }
+        } else {
+          // Initialize with default if empty
+          const initial = [DEFAULT_AE];
+          setAvailableAes(initial);
+          await saveAccountExecutives(initial);
+          setData(prev => ({ ...prev, accountExecutive: initial[0] }));
+        }
+      } catch (e) {
+        console.error("Error loading AEs", e);
+        setAvailableAes([DEFAULT_AE]);
+      } finally {
+        setIsLoadingAes(false);
+      }
+    };
+    
+    loadAes();
+  }, []); // Run once on mount
 
   // Reset or load data when initialData changes
   useEffect(() => {
@@ -83,7 +102,7 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     }));
   };
 
-  const handleAddAe = () => {
+  const handleAddAe = async () => {
     if (!newAeName || !newAeEmail) return;
     const newAe: AccountExecutive = {
       id: `ae_${Date.now()}`,
@@ -91,8 +110,11 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
       email: newAeEmail
     };
     const updated = [...availableAes, newAe];
-    setAvailableAes(updated);
-    localStorage.setItem('taxdome_aes_list', JSON.stringify(updated));
+    setAvailableAes(updated); // Optimistic update
+    
+    // Save to cloud/storage
+    await saveAccountExecutives(updated);
+
     setData(prev => ({ ...prev, accountExecutive: newAe }));
     setNewAeName('');
     setNewAeEmail('');
@@ -107,11 +129,13 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     setAeToDelete(id);
   };
 
-  const confirmDeleteAe = () => {
+  const confirmDeleteAe = async () => {
     if (!aeToDelete) return;
     const updated = availableAes.filter(ae => ae.id !== aeToDelete);
-    setAvailableAes(updated);
-    localStorage.setItem('taxdome_aes_list', JSON.stringify(updated));
+    setAvailableAes(updated); // Optimistic update
+    
+    // Save to cloud/storage
+    await saveAccountExecutives(updated);
     
     // If we deleted the currently selected one, select the first available
     if (data.accountExecutive.id === aeToDelete) {
@@ -189,7 +213,10 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
           <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setShowAeModal(false)} />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center mb-6 flex-shrink-0">
-              <h3 className="text-lg font-bold text-gray-900">Manage Account Executives</h3>
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                 Manage Account Executives 
+                 <Cloud size={16} className="text-taxdome-blue" />
+              </h3>
               <button onClick={() => setShowAeModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
@@ -409,7 +436,8 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
                         const selected = availableAes.find(ae => ae.id === e.target.value);
                         if (selected) setData({...data, accountExecutive: selected});
                       }}
-                      className="w-full pl-10 pr-10 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-taxdome-blue focus:border-transparent outline-none transition-all appearance-none cursor-pointer"
+                      disabled={isLoadingAes}
+                      className="w-full pl-10 pr-10 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-taxdome-blue focus:border-transparent outline-none transition-all appearance-none cursor-pointer disabled:opacity-50"
                     >
                       {availableAes.map(ae => (
                         <option key={ae.id} value={ae.id}>
@@ -418,7 +446,7 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
                       ))}
                     </select>
                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                        <ChevronDown size={16} />
+                         {isLoadingAes ? <Loader2 size={16} className="animate-spin" /> : <ChevronDown size={16} />}
                      </div>
                   </div>
                 </div>
