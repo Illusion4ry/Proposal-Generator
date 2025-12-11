@@ -10,6 +10,9 @@ Tone: Professional, empathetic, persuasive, and concise.
 Search Tool: You MUST use 'googleSearch' to find current pricing for the user's plan on taxdome.com/pricing.
 Format: Return ONLY valid JSON. No markdown.
 Language: Respect the requested OUTPUT LANGUAGE for all text.
+Currency: Ensure ALL prices include the appropriate currency symbol (e.g. $) and use comma separators for thousands (e.g. $1,500).
+Quantifiable Results: ALWAYS quantify benefits in solutions using numbers, percentages, or multipliers.
+Conciseness: Solutions MUST be short and punchy (under 12 words).
 `;
 
 export const DEFAULT_PROMPT_TEMPLATE = `
@@ -32,8 +35,11 @@ Context:
 Task:
 1. Search taxdome.com/pricing for the CURRENT annual price of "{{selectedPlan}}".
 2. Create an Executive Summary in {{language}}.
-   - Overview: Strictly ONE paragraph, 4-5 sentences.
-   - Challenges & Solutions: Identify 3 specific pains/problems from the transcript (or imply from features if transcript missing). Map each to a specific TaxDome solution. Be concise.
+   - Overview: Strictly MAXIMUM 2 sentences. Focus on the core value proposition to save space.
+   - Challenges & Solutions: Identify 3 specific pains/problems from the transcript (or imply from features if transcript missing). Map each to a specific TaxDome solution.
+     IMPORTANT: 
+     - Solution MUST be quantifiable (e.g., "3x faster", "save 10 hrs/week").
+     - Solution MUST be concise (max 12 words).
 3. Create a Quote in {{language}}.
    - Software = {{firmSize}} * [Found Price].
    - Total = Software + {{onboardingPrice}}.
@@ -42,26 +48,26 @@ OUTPUT JSON FORMAT:
 {
   "executiveSummary": {
     "title": "A catchy title (in {{language}})",
-    "body": "The 4-5 sentence overview paragraph (in {{language}})",
+    "body": "The overview paragraph (MAXIMUM 2 sentences, in {{language}})",
     "challengesAndSolutions": [
-      { "problem": "Specific client pain point (e.g. 'Chasing clients for documents')", "solution": "How TaxDome solves it (e.g. 'Automated reminders & mobile app')" },
+      { "problem": "Specific pain point (e.g. 'Chasing clients for documents')", "solution": "Concise, quantifiable solution (e.g. 'Get documents 3x faster with auto-reminders')" },
       { "problem": "...", "solution": "..." },
       { "problem": "...", "solution": "..." }
     ]
   },
   "quote": {
     "planName": "{{selectedPlan}}",
-    "pricePerUser": "Found price/user/year",
+    "pricePerUser": "Price MUST include currency symbol and commas (e.g. $800 or $1,200). DO NOT include '/user' or '/year'.",
     "billingFrequency": "billed annually (in {{language}})",
-    "softwareTotal": "Calculated total",
+    "softwareTotal": "Total MUST include currency symbol and commas (e.g. $4,000).",
     "onboarding": {
       "name": "{{onboardingName}} (in {{language}})",
       "price": "{{onboardingPrice}}",
       "features": ["2-3 key onboarding features (in {{language}})"]
     },
-    "totalAnnualCost": "Grand total string",
+    "totalAnnualCost": "Grand total MUST include currency symbol and commas (e.g. $5,999).",
     "featuresList": ["5-7 key features (in {{language}})"],
-    "closingStatement": "Action-oriented closing (in {{language}})"
+    "closingStatement": "Exact phrase: 'To get started, please contact Edgar Espinoza at edgar@taxdome.com' (Translated to {{language}} if necessary)."
   }
 }
 `;

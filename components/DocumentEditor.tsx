@@ -57,6 +57,33 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
     setProposalData(content);
   }, [content]);
 
+  // Helper to force currency symbol and proper number formatting
+  const formatPrice = (val: string | undefined) => {
+    if (!val) return '';
+    const trimmed = val.trim();
+    
+    // Check if it's a price-like string (allows $, commas, decimals)
+    // Matches optional $, then digits/commas, optional decimals
+    const isPriceLike = /^[$]?[\d,]+(\.\d+)?$/.test(trimmed);
+    
+    if (isPriceLike) {
+        // Clean to pure number
+        const clean = trimmed.replace(/[^0-9.]/g, '');
+        const num = parseFloat(clean);
+        
+        if (!isNaN(num)) {
+            // Format with commas: $6,999 or $6,999.50
+            return `$${num.toLocaleString('en-US', { 
+                minimumFractionDigits: 0, 
+                maximumFractionDigits: 2 
+            })}`;
+        }
+    }
+    
+    // Fallback if regex doesn't match (e.g. currency symbol is different or format is complex)
+    return trimmed;
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -406,8 +433,8 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
         </div>
 
         {/* PAGE 2: Quote */}
-        {/* Added force-break-before for explicit separation in PDF flow */}
-        <div className={`print-page w-full bg-white relative overflow-visible flex flex-col ${isDownloading ? 'force-break-before' : 'shadow-2xl min-h-[297mm] print:shadow-none'}`}>
+        {/* Removed redundant force-break-before to fix blank page issue */}
+        <div className={`print-page w-full bg-white relative overflow-visible flex flex-col ${isDownloading ? '' : 'shadow-2xl min-h-[297mm] print:shadow-none'}`}>
             
              <ProposalHeader title="Investment Quote" />
 
@@ -426,7 +453,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                             <div className="flex items-baseline mb-3">
                                 <EditableText 
                                     tag="span" 
-                                    value={proposalData.quote.pricePerUser} 
+                                    value={formatPrice(proposalData.quote.pricePerUser)} 
                                     onUpdate={(val) => updateContent('quote', 'pricePerUser', val)}
                                     className="text-4xl font-bold text-taxdome-blue tracking-tight"
                                 />
@@ -512,7 +539,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                              <div className="text-xs text-gray-400 uppercase font-bold mb-1">One-time Fee</div>
                              <EditableText 
                                 tag="span" 
-                                value={proposalData.quote.onboarding.price} 
+                                value={formatPrice(proposalData.quote.onboarding.price)} 
                                 onUpdate={(val) => updateOnboarding('price', val)}
                                 className="text-2xl font-bold text-gray-900"
                             />
@@ -527,7 +554,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                             <span>Annual Software ({firmData.firmSize} users)</span>
                             <EditableText 
                                 tag="span" 
-                                value={proposalData.quote.softwareTotal || '$0'} 
+                                value={formatPrice(proposalData.quote.softwareTotal) || '$0'} 
                                 onUpdate={(val) => updateContent('quote', 'softwareTotal', val)}
                                 className="font-medium"
                             />
@@ -535,7 +562,7 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                         
                         <div className="flex justify-between items-center mb-6 text-gray-600 text-sm">
                             <span>Implementation & Onboarding</span>
-                             <span className="font-medium">{proposalData.quote.onboarding.price}</span>
+                             <span className="font-medium">{formatPrice(proposalData.quote.onboarding.price)}</span>
                         </div>
 
                         <div className="flex justify-between items-center pt-4 border-t border-gray-200">
@@ -545,31 +572,21 @@ const DocumentEditor: React.FC<Props> = ({ firmData, content, onBack, onNew, onS
                              </div>
                             <EditableText 
                                 tag="span" 
-                                value={proposalData.quote.totalAnnualCost} 
+                                value={formatPrice(proposalData.quote.totalAnnualCost)} 
                                 onUpdate={(val) => updateContent('quote', 'totalAnnualCost', val)}
                                 className="text-4xl font-bold text-taxdome-blue"
                             />
                         </div>
                     </div>
 
-                    {/* Closing & Signature - ALL IN ONE BLOCK TO AVOID SPLITTING */}
+                    {/* Closing Section - Signature removed, clean contact text */}
                      <div className="mt-8 text-center avoid-break">
                         <EditableText 
                             tag="p" 
                             value={proposalData.quote.closingStatement} 
                             onUpdate={(val) => updateContent('quote', 'closingStatement', val)}
-                            className="text-lg font-medium text-gray-600 italic max-w-2xl mx-auto"
+                            className="text-lg font-medium text-gray-700 bg-gray-50 px-6 py-4 rounded-xl inline-block mx-auto border border-gray-100"
                         />
-                        <div className="mt-16 pt-8 border-t border-gray-100 flex justify-between px-12 opacity-60">
-                            <div className="text-center group cursor-pointer">
-                                <div className="h-12 border-b border-gray-300 w-48 mb-2 group-hover:border-gray-400 transition-colors"></div>
-                                <span className="text-xs text-gray-400 uppercase tracking-wide">Signature</span>
-                            </div>
-                            <div className="text-center group cursor-pointer">
-                                <div className="h-12 border-b border-gray-300 w-48 mb-2 group-hover:border-gray-400 transition-colors"></div>
-                                <span className="text-xs text-gray-400 uppercase tracking-wide">Date</span>
-                            </div>
-                        </div>
                     </div>
 
                 </div>
