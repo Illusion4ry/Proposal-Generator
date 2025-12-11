@@ -1,12 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
 import { FirmData, ProposalContent, SavedProposal } from './types';
 import InputWizard from './components/InputWizard';
 import DocumentEditor from './components/DocumentEditor';
 import HistoryModal from './components/HistoryModal';
 import PromptModal from './components/PromptModal';
-import { getSavedProposals, saveProposalToStorage, deleteProposalFromStorage } from './services/storageService';
+import { 
+  getSavedProposals, 
+  saveProposalToStorage, 
+  deleteProposalFromStorage,
+  getCustomPrompt,
+  saveCustomPrompt 
+} from './services/storageService';
 import { generateProposal } from './services/geminiService';
-import { Layout, Settings2, History } from 'lucide-react';
+import { Layout, Settings2, History, CloudOff } from 'lucide-react';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'input' | 'editor'>('input');
@@ -25,18 +32,29 @@ const App: React.FC = () => {
   const [showPromptSettings, setShowPromptSettings] = useState(false);
   const [customPrompt, setCustomPrompt] = useState<string | null>(null);
 
-  // Load prompt pref on mount
+  // Load shared cloud prompt on mount
   useEffect(() => {
-    const savedPrompt = localStorage.getItem('taxdome_custom_prompt_v1');
-    if (savedPrompt) setCustomPrompt(savedPrompt);
+    const loadSharedPrompt = async () => {
+      try {
+        const remotePrompt = await getCustomPrompt();
+        if (remotePrompt) setCustomPrompt(remotePrompt);
+      } catch (err) {
+        console.error("Failed to load shared prompt configuration");
+      }
+    };
+    loadSharedPrompt();
   }, []);
 
-  const handleSavePrompt = (newPrompt: string) => {
-    setCustomPrompt(newPrompt);
-    localStorage.setItem('taxdome_custom_prompt_v1', newPrompt);
+  const handleSavePrompt = async (newPrompt: string) => {
+    setCustomPrompt(newPrompt); // Optimistic update
+    try {
+      await saveCustomPrompt(newPrompt);
+    } catch (error) {
+      alert("Failed to save shared prompt to cloud. Changes may not persist for other users.");
+    }
   };
 
-  // Load history from "Cloud"
+  // Load history from Cloud
   const handleOpenHistory = async () => {
     setShowHistory(true);
     setIsLoadingHistory(true);
@@ -45,6 +63,7 @@ const App: React.FC = () => {
       setSavedProposals(proposals);
     } catch (error) {
       console.error("Failed to load proposals", error);
+      alert("Could not connect to proposal database.");
     } finally {
       setIsLoadingHistory(false);
     }
@@ -60,11 +79,17 @@ const App: React.FC = () => {
 
   const handleDeleteHistoryItem = async (id: string) => {
     if (confirm("Are you sure you want to delete this saved proposal from the cloud?")) {
-      setIsLoadingHistory(true); // Show loading inside modal if possible, or simple re-fetch
-      await deleteProposalFromStorage(id);
-      const updated = await getSavedProposals();
-      setSavedProposals(updated);
-      setIsLoadingHistory(false);
+      setIsLoadingHistory(true); 
+      try {
+        await deleteProposalFromStorage(id);
+        // Refresh list
+        const updated = await getSavedProposals();
+        setSavedProposals(updated);
+      } catch (e) {
+        alert("Failed to delete proposal.");
+      } finally {
+        setIsLoadingHistory(false);
+      }
     }
   };
 
@@ -99,8 +124,13 @@ const App: React.FC = () => {
       content: updatedContent
     };
 
-    await saveProposalToStorage(proposalToSave);
-    setCurrentProposalId(id); // Ensure future saves update this record
+    try {
+      await saveProposalToStorage(proposalToSave);
+      setCurrentProposalId(id); // Ensure future saves update this record
+      alert("Proposal saved to cloud successfully.");
+    } catch (e) {
+      alert("Failed to save proposal to cloud.");
+    }
   };
 
   const handleBack = () => {
@@ -144,8 +174,11 @@ const App: React.FC = () => {
                <Layout className="text-taxdome-blue" size={32} />
             </div>
             <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2">Proposal Generator</h1>
-            <p className="text-lg text-gray-600 max-w-lg mx-auto">
+            <p className="text-lg text-gray-600 max-w-lg mx-auto mb-2">
               Create world-class TaxDome proposals in seconds using AI.
+            </p>
+            <p className="text-xs text-blue-600 font-medium bg-blue-50 inline-block px-3 py-1 rounded-full border border-blue-100">
+               Cloud Sync Active • Team Collaboration Mode
             </p>
             
             <div className="flex justify-center gap-3 mt-6">

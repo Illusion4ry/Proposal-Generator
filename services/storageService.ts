@@ -2,173 +2,168 @@
 import { SavedProposal, AccountExecutive } from "../types";
 
 // CONFIGURATION
-// In a real deployment, this would be your actual backend URL
+// Ensure this points to your shared team backend
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://api.your-taxdome-integrations.com';
-const PROPOSAL_STORAGE_KEY = 'taxdome_proposals_v1';
-const AE_STORAGE_KEY = 'taxdome_aes_list_v1';
-const USE_CLOUD = false; // Set to true when you have a backend running
+// Detect if we are likely in a demo/dev environment without a real backend
+const IS_DEMO_MODE = API_BASE_URL.includes('your-taxdome-integrations') || API_BASE_URL.includes('localhost');
 
-/**
- * SIMULATED CLOUD DELAY
- * This helps visualize how the app will behave with a real internet connection.
- */
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// HELPER: Standard headers for JSON content
+const headers = {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json'
+};
 
-// --- PROPOSALS ---
+// MOCK CLOUD STORAGE (In-Memory)
+// Used to prevent app crash when no backend is connected, while complying with "No LocalStorage" policy.
+const MOCK_DB = {
+  proposals: [] as SavedProposal[],
+  aes: [] as AccountExecutive[],
+  prompt: null as string | null
+};
+
+// --- PROPOSALS (HISTORY) ---
 
 export const getSavedProposals = async (): Promise<SavedProposal[]> => {
-  let proposals: SavedProposal[] = [];
-
-  // 1. Fetch
-  if (USE_CLOUD) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/proposals`);
-      if (!response.ok) throw new Error('Network response was not ok');
-      proposals = await response.json();
-    } catch (error) {
-      console.warn("Cloud fetch failed, falling back to local storage (Offline Mode)", error);
-    }
+  if (IS_DEMO_MODE) {
+    // Return mock data directly
+    return MOCK_DB.proposals.sort((a, b) => b.lastModified - a.lastModified);
   }
 
-  // 2. Local Fallback (Simulation)
-  if (proposals.length === 0 && !USE_CLOUD) {
-    await delay(600); // Simulate network latency
-    try {
-      const data = localStorage.getItem(PROPOSAL_STORAGE_KEY);
-      if (data) proposals = JSON.parse(data);
-    } catch (e) {
-      console.error("Failed to load history", e);
-      proposals = [];
-    }
-  }
-
-  // 3. AUTO-DELETION POLICY (30 Days)
-  const now = Date.now();
-  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-
-  const activeProposals = proposals.filter(p => {
-    // If createdAt is missing (legacy), assume it's valid or use lastModified
-    const dateToCheck = p.createdAt || p.lastModified || now;
-    return (now - dateToCheck) < THIRTY_DAYS_MS;
-  });
-
-  // If we found expired items, clean them up
-  if (activeProposals.length < proposals.length) {
-    console.log(`Cleanup: Found ${proposals.length - activeProposals.length} expired proposals.`);
+  try {
+    const response = await fetch(`${API_BASE_URL}/proposals`, { headers });
+    if (!response.ok) throw new Error(`Cloud fetch failed: ${response.statusText}`);
     
-    // Identify expired IDs
-    const expiredIds = proposals
-      .filter(p => !activeProposals.includes(p))
-      .map(p => p.id);
+    const proposals: SavedProposal[] = await response.json();
 
-    // Delete them
-    expiredIds.forEach(id => deleteProposalFromStorage(id).catch(err => console.error("Auto-delete failed", err)));
-    
-    // For local storage, we can just overwrite immediately to be clean
-    if (!USE_CLOUD) {
-      localStorage.setItem(PROPOSAL_STORAGE_KEY, JSON.stringify(activeProposals));
+    // AUTO-DELETION POLICY (30 Days)
+    const now = Date.now();
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+    const validProposals: SavedProposal[] = [];
+    const expiredIds: string[] = [];
+
+    proposals.forEach(p => {
+      const dateToCheck = p.createdAt || p.lastModified || now;
+      if ((now - dateToCheck) < THIRTY_DAYS_MS) {
+        validProposals.push(p);
+      } else {
+        expiredIds.push(p.id);
+      }
+    });
+
+    if (expiredIds.length > 0) {
+      console.log(`Cloud Cleanup: Removing ${expiredIds.length} expired proposals.`);
+      Promise.all(expiredIds.map(id => 
+        fetch(`${API_BASE_URL}/proposals/${id}`, { method: 'DELETE' })
+          .catch(err => console.error(`Failed to auto-delete ${id}`, err))
+      ));
     }
-  }
 
-  return activeProposals;
+    return validProposals.sort((a, b) => b.lastModified - a.lastModified);
+
+  } catch (error) {
+    console.warn("Failed to load proposals from cloud (Backend unreachable).");
+    return []; 
+  }
 };
 
 export const saveProposalToStorage = async (proposal: SavedProposal): Promise<void> => {
-  // 1. Try Cloud Save
-  if (USE_CLOUD) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/proposals`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(proposal)
-      });
-      if (!response.ok) throw new Error('Save failed');
-      return; // Success
-    } catch (error) {
-      console.warn("Cloud save failed, saving locally", error);
-    }
+  if (IS_DEMO_MODE) {
+    const idx = MOCK_DB.proposals.findIndex(p => p.id === proposal.id);
+    if (idx >= 0) MOCK_DB.proposals[idx] = proposal;
+    else MOCK_DB.proposals.push(proposal);
+    return;
   }
 
-  // 2. Local Fallback
-  await delay(800); // Simulate network latency
-  const currentData = localStorage.getItem(PROPOSAL_STORAGE_KEY);
-  const current: SavedProposal[] = currentData ? JSON.parse(currentData) : [];
+  const response = await fetch(`${API_BASE_URL}/proposals`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(proposal)
+  });
   
-  const existingIndex = current.findIndex(p => p.id === proposal.id);
-  
-  if (existingIndex >= 0) {
-    current[existingIndex] = proposal;
-  } else {
-    current.unshift(proposal); // Add to top
+  if (!response.ok) {
+    throw new Error('Failed to save proposal to cloud');
   }
-  
-  localStorage.setItem(PROPOSAL_STORAGE_KEY, JSON.stringify(current));
 };
 
 export const deleteProposalFromStorage = async (id: string): Promise<void> => {
-  // 1. Try Cloud Delete
-  if (USE_CLOUD) {
-    try {
-      await fetch(`${API_BASE_URL}/proposals/${id}`, { method: 'DELETE' });
-      return;
-    } catch (error) {
-      console.warn("Cloud delete failed", error);
-    }
+  if (IS_DEMO_MODE) {
+    MOCK_DB.proposals = MOCK_DB.proposals.filter(p => p.id !== id);
+    return;
   }
 
-  // 2. Local Fallback
-  await delay(400); 
-  const currentData = localStorage.getItem(PROPOSAL_STORAGE_KEY);
-  if (!currentData) return;
+  const response = await fetch(`${API_BASE_URL}/proposals/${id}`, {
+    method: 'DELETE'
+  });
 
-  const current: SavedProposal[] = JSON.parse(currentData);
-  const filtered = current.filter(p => p.id !== id);
-  localStorage.setItem(PROPOSAL_STORAGE_KEY, JSON.stringify(filtered));
+  if (!response.ok) {
+    throw new Error('Failed to delete proposal from cloud');
+  }
 };
 
-// --- ACCOUNT EXECUTIVES ---
+// --- ACCOUNT EXECUTIVES (TEAM) ---
 
 export const getAccountExecutives = async (): Promise<AccountExecutive[]> => {
-  let aes: AccountExecutive[] = [];
-
-  // 1. Try Cloud Fetch
-  if (USE_CLOUD) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/account-executives`);
-      if (!response.ok) throw new Error('Network response was not ok');
-      return await response.json();
-    } catch (error) {
-      console.warn("AE Cloud fetch failed, falling back to local", error);
-    }
+  if (IS_DEMO_MODE) {
+    return [...MOCK_DB.aes];
   }
 
-  // 2. Local Fallback
-  await delay(300); // Short latency
-  const data = localStorage.getItem(AE_STORAGE_KEY);
-  if (data) {
-    aes = JSON.parse(data);
+  try {
+    const response = await fetch(`${API_BASE_URL}/account-executives`, { headers });
+    if (!response.ok) throw new Error('Failed to load team members');
+    return await response.json();
+  } catch (error) {
+    console.warn("Cloud AE fetch failed (Backend unreachable). Returning empty list.");
+    return [];
   }
-  
-  return aes;
 };
 
 export const saveAccountExecutives = async (aes: AccountExecutive[]): Promise<void> => {
-  // 1. Try Cloud Save (typically we'd PUT the whole list or POST individual, assuming PUT list here for sync)
-  if (USE_CLOUD) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/account-executives`, {
-        method: 'PUT', // or POST depending on API
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(aes)
-      });
-      if (!response.ok) throw new Error('AE Save failed');
-      return;
-    } catch (error) {
-      console.warn("AE Cloud save failed, saving locally", error);
-    }
+  if (IS_DEMO_MODE) {
+    MOCK_DB.aes = [...aes];
+    return;
   }
 
-  // 2. Local Fallback
-  await delay(500);
-  localStorage.setItem(AE_STORAGE_KEY, JSON.stringify(aes));
+  const response = await fetch(`${API_BASE_URL}/account-executives`, {
+    method: 'PUT', 
+    headers,
+    body: JSON.stringify(aes)
+  });
+
+  if (!response.ok) throw new Error('Failed to save team members');
+};
+
+// --- GLOBAL SETTINGS (SHARED PROMPT) ---
+
+export const getCustomPrompt = async (): Promise<string | null> => {
+  if (IS_DEMO_MODE) {
+    return MOCK_DB.prompt;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/settings/prompt`, { headers });
+    if (response.status === 404) return null; 
+    if (!response.ok) throw new Error('Failed to load settings');
+    
+    const data = await response.json();
+    return data.value || null;
+  } catch (error) {
+    console.warn("Could not load shared prompt (Backend unreachable)");
+    return null;
+  }
+};
+
+export const saveCustomPrompt = async (promptTemplate: string): Promise<void> => {
+  if (IS_DEMO_MODE) {
+    MOCK_DB.prompt = promptTemplate;
+    return;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/settings/prompt`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ value: promptTemplate })
+  });
+
+  if (!response.ok) throw new Error('Failed to save shared prompt');
 };

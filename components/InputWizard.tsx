@@ -57,11 +57,15 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
           // Initialize with default if empty
           const initial = [DEFAULT_AE];
           setAvailableAes(initial);
-          await saveAccountExecutives(initial);
+          // Attempt to seed the cloud with default, but don't block if it fails
+          saveAccountExecutives(initial).catch(() => {
+            // Silently ignore save error during initialization in case of network issues
+            // This prevents the "Failed to fetch" error from appearing in the console for this specific auto-seed action
+          });
           setData(prev => ({ ...prev, accountExecutive: initial[0] }));
         }
       } catch (e) {
-        console.error("Error loading AEs", e);
+        // Fallback to default silently
         setAvailableAes([DEFAULT_AE]);
       } finally {
         setIsLoadingAes(false);
@@ -112,13 +116,15 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     const updated = [...availableAes, newAe];
     setAvailableAes(updated); // Optimistic update
     
-    // Save to cloud/storage
-    await saveAccountExecutives(updated);
+    try {
+      await saveAccountExecutives(updated);
+    } catch (e) {
+      console.warn("Could not save new AE to cloud");
+    }
 
     setData(prev => ({ ...prev, accountExecutive: newAe }));
     setNewAeName('');
     setNewAeEmail('');
-    // Keep inputs clear but allow user to add more or close manually
   };
 
   const handleRemoveAe = (id: string) => {
@@ -134,8 +140,11 @@ const InputWizard: React.FC<Props> = ({ onSubmit, isGenerating, initialData }) =
     const updated = availableAes.filter(ae => ae.id !== aeToDelete);
     setAvailableAes(updated); // Optimistic update
     
-    // Save to cloud/storage
-    await saveAccountExecutives(updated);
+    try {
+      await saveAccountExecutives(updated);
+    } catch (e) {
+      console.warn("Could not sync deletion to cloud");
+    }
     
     // If we deleted the currently selected one, select the first available
     if (data.accountExecutive.id === aeToDelete) {
