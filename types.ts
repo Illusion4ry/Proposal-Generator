@@ -1,3 +1,4 @@
+
 export enum PlanType {
   ESSENTIALS = 'TaxDome Essentials',
   PRO = 'TaxDome Pro',
@@ -13,6 +14,12 @@ export interface OnboardingPackage {
   features: string[];
 }
 
+export interface AccountExecutive {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface FirmData {
   firmName: string;
   firmSize: number;
@@ -23,6 +30,7 @@ export interface FirmData {
   features: string[];
   transcript: string;
   additionalContext: string;
+  accountExecutive: AccountExecutive;
 }
 
 export interface ChallengeSolution {

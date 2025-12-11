@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { FirmData, ProposalContent } from "../types";
 
@@ -67,7 +68,7 @@ OUTPUT JSON FORMAT:
     },
     "totalAnnualCost": "Grand total MUST include currency symbol and commas (e.g. $5,999).",
     "featuresList": ["5-7 key features (in {{language}})"],
-    "closingStatement": "Exact phrase: 'To get started, please contact Edgar Espinoza at edgar@taxdome.com' (Translated to {{language}} if necessary)."
+    "closingStatement": "Exact phrase: 'To get started, please contact {{aeName}} at {{aeEmail}}' (Translated to {{language}} if necessary)."
   }
 }
 `;
@@ -89,7 +90,9 @@ const hydratePrompt = (template: string, data: FirmData): string => {
     '{{desiredFeatures}}': data.features.join(", "),
     '{{language}}': data.language,
     '{{transcript}}': data.transcript || "None provided",
-    '{{context}}': data.additionalContext || "None provided"
+    '{{context}}': data.additionalContext || "None provided",
+    '{{aeName}}': data.accountExecutive.name,
+    '{{aeEmail}}': data.accountExecutive.email
   };
 
   Object.entries(replacements).forEach(([key, value]) => {
